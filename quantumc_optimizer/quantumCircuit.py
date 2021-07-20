@@ -1,23 +1,31 @@
-import logging
-
-import networkx
+import networkx as nx
+import matplotlib.pyplot as plt
 import yaml
 import os
+import logging
 
 quantum_logger = logging.getLogger("QuantumCircuit")
 class ibmq_circuit(object):
     '''
     IBM Q Circuit
-
     '''
     def __init__(self,circuitname,circuityaml):
-        self._circuit=None
+        self.circuit=None
         self.circuitname=circuitname
         self.circuitconnection=None
         self.circuitdescription=None
-        # if not circuityaml:
-        print(circuityaml)
+        self.circuitconfig = None
+        self.circuitgraph = nx.Graph()
         self._loadcircuit(circuityaml)
+
+    def _getgraph(self):
+        circuitnode = []
+        for item in self.circuitconnection:
+            circuitnode.extend(item)
+        circuitnode = list(set(circuitnode))
+        self.circuitgraph.add_nodes_from(circuitnode)
+        circuitconnection = [(cir[0],cir[1]) for cir in self.circuitconnection]
+        self.circuitgraph.add_edges_from(circuitconnection)
 
     def _loadcircuit(self,circuityaml):
         '''
@@ -38,6 +46,8 @@ class ibmq_circuit(object):
                 logging.warning("Circuit Name in YAML does not Match the Circuit Name in function !! "
                                 "Overwrite with the name in YAML")
                 self.circuitname = data_loader["name"]
+            self.circuitconfig = data_loader
+            self._getgraph()
         except Exception as e:
             quantum_logger.warning(str(e))
 
@@ -46,7 +56,7 @@ class ibmq_circuit(object):
 
         :return:
         '''
-        pass
+        return  self.circuitgraph
 
     def _readyaml(self,yamlfullname):
         '''
@@ -82,16 +92,25 @@ class ibmq_circuit(object):
             raise  e
 
     def draw(self):
-        pass
+        nx.draw(self.circuitgraph,with_labels=True)
+        plt.title(self.circuitname)
+        plt.show()
 
 
 class ibmq_santiago(ibmq_circuit):
+    '''
+
+    '''
     def __init__(self):
         self.circuitname="ibmq_santiago"
-        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,circuityaml="{}.yaml".format(self.circuitname))
+        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
+                                            circuityaml="{}.yaml".format(self.circuitname))
 
 
 class ibmq_bogota(ibmq_circuit):
+    '''
+
+    '''
     def __init__(self):
         self.circuitname="ibmq_bogota"
         super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
@@ -99,6 +118,9 @@ class ibmq_bogota(ibmq_circuit):
 
 
 class ibmq_manila(ibmq_circuit):
+    '''
+
+    '''
     def __init__(self):
         self.circuitname="ibmq_manila"
         super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
@@ -106,10 +128,14 @@ class ibmq_manila(ibmq_circuit):
 
 
 class ibmq_jakarta(ibmq_circuit):
+    '''
+
+    '''
     def __init__(self):
         self.circuitname="ibmq_jakarta"
         super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
                                             circuityaml="{}.yaml".format(self.circuitname))
+
 
 class ibmq_creater(ibmq_circuit):
     '''
@@ -136,6 +162,9 @@ class ibmq_creater(ibmq_circuit):
             'connection':connection
                         }
 
+
 if __name__ == '__main__':
     a = ibmq_santiago()
     print(a.circuitname)
+    print(a.circuitconnection)
+    a.draw()
