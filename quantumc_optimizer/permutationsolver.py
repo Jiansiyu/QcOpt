@@ -4,7 +4,6 @@ import multiprocessing
 
 permutation_logger = logging.getLogger(__name__)
 
-
 class PermutationSolver(object):
     '''
     Permutation solution solver
@@ -74,6 +73,9 @@ class PermutationSolver(object):
     def _permutationindexer(self):
         self.permutationtable = [list(x) for x in (itertools.permutations(range(self.max_n + 1), self.max_n + 1))]
 
+    def getfullpossiblestates(self):
+        return  self.permutationtable
+
     def solve(self, starter, maxsolution=5):
         '''
         Permutation solver
@@ -110,6 +112,15 @@ class PermutationSolver(object):
                         current_temp.append(nextElement)
                         stack.append(current_temp)
         return stack
+
+    def next(self, starter):
+        if not starter:
+            raise TypeError("The Initial Input \"starter\" can not be None")
+        key = self._formIndexKey(starter)
+        if key in self.permutationdic:
+            return  self.permutationdic[key]
+        else:
+            raise RuntimeError("Can not find starter in the candidate dictionary [{}]".format(starter))
 
     def tester(self, array):
         print(self.permutationdic[self._formIndexKey(array)])

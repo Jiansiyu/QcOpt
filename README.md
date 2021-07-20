@@ -5,7 +5,7 @@ An Quantum Circuit Optimization Package
 ## installation 
 
 ```
-git+https://github.com/Jiansiyu/QcOpt.git
+pip install git+https://github.com/Jiansiyu/QcOpt.git
 ```
 
 
