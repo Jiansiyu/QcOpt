@@ -1,17 +1,23 @@
+import logging
+
 import networkx
 import yaml
 import os
 
-
+quantum_logger = logging.getLogger("QuantumCircuit")
 class ibmq_circuit(object):
+    '''
+    IBM Q Circuit
 
-    def __init__(self,circuityaml=None):
+    '''
+    def __init__(self,circuitname,circuityaml):
         self._circuit=None
-        self.circuitname=None
+        self.circuitname=circuitname
         self.circuitconnection=None
         self.circuitdescription=None
-        if not circuityaml:
-            self._loadcircuit(circuityaml)
+        # if not circuityaml:
+        print(circuityaml)
+        self._loadcircuit(circuityaml)
 
     def _loadcircuit(self,circuityaml):
         '''
@@ -20,19 +26,60 @@ class ibmq_circuit(object):
         :param circuityaml: YAML file nmae that contains the circuit defination
         :return:
         '''
-        yamlfullname = os.path.join(os.path.dirname(os.path.realpath(__file__)),circuityaml)
+        yamlfullname = os.path.join(os.path.dirname(os.path.realpath(__file__)),"statics/circuit",circuityaml)
         if not os.path.isfile(yamlfullname):
             raise IOError("Can not Find Quamtum Circuit YAML define in path <{}>, \n "
                           "please check whether the YAML file have read permission!".format(yamlfullname))
 
+        try:
+            data_loader = self._readyaml(yamlfullname=yamlfullname)
+            self.circuitconnection = data_loader["connection"]
+            if not self.circuitname == data_loader["name"]:
+                logging.warning("Circuit Name in YAML does not Match the Circuit Name in function !! "
+                                "Overwrite with the name in YAML")
+                self.circuitname = data_loader["name"]
+        except Exception as e:
+            quantum_logger.warning(str(e))
+
     def getnetwork(self):
+        '''
+
+        :return:
+        '''
         pass
 
-    def _readyaml(self):
-        pass
+    def _readyaml(self,yamlfullname):
+        '''
+        :param yamlfullname:
+        :return:
+        '''
+        try:
+            with open(yamlfullname,'r') as stream:
+                data_loader = yaml.safe_load(stream)
+        except Exception as e:
+            quantum_logger.warning(str(e))
 
-    def savecircuit(self):
-        pass
+        return  data_loader
+
+
+    def savecircuit(self,saveyamlname):
+        '''
+        :return:
+        '''
+
+        if not isinstance(saveyamlname,str):
+            pass
+
+        if os.path.isfile(saveyamlname):
+            pass
+
+        try:
+            with open(saveyamlname,'w', encoding='utf8') as outfile:
+                yaml.dump(self._circuit,outfile,default_flow_style=False, allow_unicode=True)
+        except IOError as e:
+            quantum_logger.warning("{}".format(str(e)))
+        except Exception as e:
+            raise  e
 
     def draw(self):
         pass
@@ -41,31 +88,34 @@ class ibmq_circuit(object):
 class ibmq_santiago(ibmq_circuit):
     def __init__(self):
         self.circuitname="ibmq_santiago"
-        super(ibmq_santiago, self).__init__(circuityaml="{}.yaml".format(self.circuitname))
+        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,circuityaml="{}.yaml".format(self.circuitname))
 
 
 class ibmq_bogota(ibmq_circuit):
     def __init__(self):
         self.circuitname="ibmq_bogota"
-        super(ibmq_santiago, self).__init__(circuityaml="{}.yaml".format(self.circuitname))
-        pass
+        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
+                                            circuityaml="{}.yaml".format(self.circuitname))
 
 
 class ibmq_manila(ibmq_circuit):
     def __init__(self):
         self.circuitname="ibmq_manila"
-        super(ibmq_santiago, self).__init__(circuityaml="{}.yaml".format(self.circuitname))
+        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
+                                            circuityaml="{}.yaml".format(self.circuitname))
 
 
 class ibmq_jakarta(ibmq_circuit):
     def __init__(self):
         self.circuitname="ibmq_jakarta"
-        super(ibmq_santiago, self).__init__(circuityaml="{}.yaml".format(self.circuitname))
-
-
+        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
+                                            circuityaml="{}.yaml".format(self.circuitname))
 
 class ibmq_creater(ibmq_circuit):
+    '''
+    IBM Circuit Creater
 
+    '''
     def __init__(self):
         self._circuit = None
 
@@ -87,8 +137,5 @@ class ibmq_creater(ibmq_circuit):
                         }
 
 if __name__ == '__main__':
-    cui = ibmq_circuit()
-    ibmq_santiago()
-    with open('ibmq_santiago.yaml') as stream:
-        data_loader = yaml.safe_load(stream)
-    print(data_loader)
+    a = ibmq_santiago()
+    print(a.circuitname)
