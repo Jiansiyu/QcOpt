@@ -10,7 +10,7 @@ class ibmq_circuit(object):
     IBM Q Circuit
     '''
     def __init__(self,circuitname,circuityaml):
-        self.circuit=None
+        self._circuit=None
         self.circuitname=circuitname
         self.circuitconnection=None
         self.circuitdescription=None
@@ -72,11 +72,10 @@ class ibmq_circuit(object):
         return  data_loader
 
 
-    def savecircuit(self,saveyamlname):
+    def savecircuit(self,saveyamlname=None):
         '''
         :return:
         '''
-
         if not isinstance(saveyamlname,str):
             pass
 
@@ -89,7 +88,7 @@ class ibmq_circuit(object):
         except IOError as e:
             quantum_logger.warning("{}".format(str(e)))
         except Exception as e:
-            raise  e
+            raise e
 
     def draw(self):
         nx.draw(self.circuitgraph,with_labels=True)
@@ -146,14 +145,14 @@ class ibmq_creater(ibmq_circuit):
         self._circuit = None
 
     def create_circuit(self,name=None,company=None,connection=None,version=None):
-        if not isinstance(name,str):
-            pass
-
-        if not isinstance(company,str):
-            pass
-
-        if not isinstance(connection,{list}):
-            pass
+        # if not isinstance(name,str):
+        #     pass
+        #
+        # if not isinstance(company,str):
+        #     pass
+        #
+        # if not isinstance(connection,{list}):
+        #     pass
 
         self._circuit = {
             'name':name,
@@ -161,6 +160,7 @@ class ibmq_creater(ibmq_circuit):
             'version':version,
             'connection':connection
                         }
+
 
 
 if __name__ == '__main__':

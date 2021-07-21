@@ -17,4 +17,4 @@ connection:
 - - 4
   - 3
 name: ibmq_santiago
-version: quantumc_optimizer_0.1
+version: 1.0.0

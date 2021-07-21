@@ -24,6 +24,8 @@ class PermutationSolver(object):
         '''
         self.max_n = max_n
         self.nthread = nthread
+        self.circuit=None
+
         self._permutationindexer()
         self.permutationtable = []
         self.permutationdic = {}
@@ -48,17 +50,21 @@ class PermutationSolver(object):
         candidate = []
         length = len(firstElement)
 
-        slow = 0
-        fast = 1
 
-        key = self._formIndexKey(firstElement)
-        while fast < length:
-            element_temp = firstElement.copy()
-            element_temp[slow], element_temp[fast] = element_temp[fast], element_temp[slow]
-            candidate.append(element_temp)
-            slow += 1
-            fast += 1
-        return {key: candidate}
+        # candidate = []
+        # length = len(firstElement)
+        #
+        # slow = 0
+        # fast = 1
+        #
+        # key = self._formIndexKey(firstElement)
+        # while fast < length:
+        #     element_temp = firstElement.copy()
+        #     element_temp[slow], element_temp[fast] = element_temp[fast], element_temp[slow]
+        #     candidate.append(element_temp)
+        #     slow += 1
+        #     fast += 1
+        # return {key: candidate}
 
     def _candidatesearcher(self):
         '''
@@ -88,7 +94,7 @@ class PermutationSolver(object):
             raise TypeError("Starter should not empty")
 
         if len(starter) != self.max_n + 1:
-            raise TypeError("Starter array size should equal to max_n when initialize the instance")
+            raise ValueError("Starter array size should equal to max_n when initialize the instance")
 
         if maxsolution <= 0:
             raise TypeError("maxsolution should be >  0")
