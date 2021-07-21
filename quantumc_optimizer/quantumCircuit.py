@@ -135,6 +135,14 @@ class ibmq_jakarta(ibmq_circuit):
         super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
                                             circuityaml="{}.yaml".format(self.circuitname))
 
+class ibmq_belem(ibmq_circuit):
+    '''
+
+    '''
+    def __init__(self):
+        self.circuitname="ibmq_belem"
+        super(ibmq_belem, self).__init__(circuitname=self.circuitname,
+                                            circuityaml="{}.yaml".format(self.circuitname))
 
 class ibmq_creater(ibmq_circuit):
     '''

@@ -1,6 +1,7 @@
 import itertools
 import logging
 import multiprocessing
+import quantumCircuit
 
 permutation_logger = logging.getLogger(__name__)
 
@@ -17,16 +18,16 @@ class PermutationSolver(object):
 
     def __init__(self,
                  max_n=5,
-                 nthread=-1):
+                 nthread=-1,
+                 qcircuit=quantumCircuit.ibmq_santiago()):
         '''
         :param max_n: the maximum element of the list start from 0, end with n [0,1,2,...,n]
         :param nthread: number of thread when calculate the permutation candidate
         '''
         self.max_n = max_n
         self.nthread = nthread
-        self.circuit=None
+        self.quantumcircuit=qcircuit
 
-        self._permutationindexer()
         self.permutationtable = []
         self.permutationdic = {}
 
@@ -50,21 +51,16 @@ class PermutationSolver(object):
         candidate = []
         length = len(firstElement)
 
+        # calculate the next permuatation candidate
+        qc_circuit =[sorted(x) for x in self.quantumcircuit.circuitconnection]
+        qc_circuit =list(k for k,_ in itertools.groupby(qc_circuit))
 
-        # candidate = []
-        # length = len(firstElement)
-        #
-        # slow = 0
-        # fast = 1
-        #
-        # key = self._formIndexKey(firstElement)
-        # while fast < length:
-        #     element_temp = firstElement.copy()
-        #     element_temp[slow], element_temp[fast] = element_temp[fast], element_temp[slow]
-        #     candidate.append(element_temp)
-        #     slow += 1
-        #     fast += 1
-        # return {key: candidate}
+        key = self._formIndexKey(firstElement)
+        for item in qc_circuit:
+            element_temp = firstElement.copy()
+            element_temp[item[0]],element_temp[item[1]] = element_temp[item[1]],element_temp[item[0]]
+            candidate.append(element_temp)
+        return {key: candidate}
 
     def _candidatesearcher(self):
         '''
