@@ -1,3 +1,5 @@
+import itertools
+
 import networkx as nx
 import matplotlib.pyplot as plt
 import yaml
@@ -5,6 +7,7 @@ import os
 import logging
 
 quantum_logger = logging.getLogger("QuantumCircuit")
+
 class ibmq_circuit(object):
     '''
     IBM Q Circuit
@@ -16,7 +19,9 @@ class ibmq_circuit(object):
         self.circuitdescription=None
         self.circuitconfig = None
         self.circuitgraph = nx.Graph()
+        self.n_qubit = 0
         self._loadcircuit(circuityaml)
+
 
     def _getgraph(self):
         circuitnode = []
@@ -47,6 +52,7 @@ class ibmq_circuit(object):
                                 "Overwrite with the name in YAML")
                 self.circuitname = data_loader["name"]
             self.circuitconfig = data_loader
+            self.n_qubit = len(set(list(itertools.chain(*self.circuitconnection))))
             self._getgraph()
         except Exception as e:
             quantum_logger.warning(str(e))
@@ -94,6 +100,14 @@ class ibmq_circuit(object):
         nx.draw(self.circuitgraph,with_labels=True)
         plt.title(self.circuitname)
         plt.show()
+
+
+
+class custmized_circuit(ibmq_circuit):
+    def __init__(self,circuitname="test_circuit_a"):
+        self.circuitname=circuitname
+        super(custmized_circuit, self).__init__(circuitname=self.circuitname,
+                                                circuityaml="{}.yaml".format(self.circuitname))
 
 
 class ibmq_santiago(ibmq_circuit):

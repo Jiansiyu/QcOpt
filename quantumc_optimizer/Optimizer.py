@@ -4,7 +4,7 @@ import logging
 import multiprocessing
 
 import networkx
-from permutationsolver import PermutationSolver
+from quantumc_optimizer.permutationsolver import PermutationSolver
 
 quantumc_logger = logging.getLogger("QcOptimizer")
 
@@ -12,11 +12,10 @@ class QcOptimizer(object):
     '''
 
     '''
-    def __init__(self,permutationrule):
+    def __init__(self,permutationrule,permutationsolver=PermutationSolver(4)):
         self.concurrent = -1 # use all the cores available
-        self.qubit_num = 6   # number of QC qubit
-        self.maxsolution= 5
-        self.permutationsolver = PermutationSolver(max_n=self.qubit_num-1)  #initialize all  the permutation tables
+        self.qubit_num = permutationsolver.n_qubit   # number of QC qubit
+        self.permutationsolver =  permutationsolver #initialize all  the permutation tables
         self.targetconnection =[]
 
     def validateconnectioncandidate(self, statearray):
@@ -73,6 +72,7 @@ class QcOptimizer(object):
         for item in permu_res:
             if self.validateconnectioncandidate(item):
                 resultArray.append(item)
+                break
         print("nQubit: {}.   iteration :{}".format(self.qubit_num,currentMaxsolution-1))
         return currentMaxsolution-1, resultArray
 
@@ -84,12 +84,10 @@ class QcOptimizer(object):
         fullconnection = [[x,y] for x,y in itertools.permutations([x for x in range(self.qubit_num)],2)]
         fullpossibleInitials = self.permutationsolver.getfullpossiblestates()
         quantumc_logger.info("total candiate initial states {}".format(len(fullpossibleInitials)))
-        self.optimalstatesolver(initialstate=[x for x in range(self.qubit_num)],target=fullconnection)
-        print(fullconnection)
+        maxIter, resultArray = self.optimalstatesolver(initialstate=[x for x in range(self.qubit_num)],target=fullconnection)
+        return  maxIter, resultArray
 
 if __name__ == '__main__':
-    import cProfile
-    with cProfile.Profile() as pr:
-        a = QcOptimizer(None)
-        a.fullconnectionsolver()
-    pr.print_stats()
+    a = QcOptimizer(None)
+    a.fullconnectionsolver()
+

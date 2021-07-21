@@ -1,7 +1,7 @@
 import itertools
 import logging
 import multiprocessing
-import quantumCircuit
+from quantumc_optimizer import quantumCircuit
 
 permutation_logger = logging.getLogger(__name__)
 
@@ -17,14 +17,14 @@ class PermutationSolver(object):
     '''
 
     def __init__(self,
-                 max_n=5,
                  nthread=-1,
                  qcircuit=quantumCircuit.ibmq_santiago()):
         '''
         :param max_n: the maximum element of the list start from 0, end with n [0,1,2,...,n]
         :param nthread: number of thread when calculate the permutation candidate
         '''
-        self.max_n = max_n
+        self.max_n = qcircuit.n_qubit -1
+        self.n_qubit = qcircuit.n_qubit
         self.nthread = nthread
         self.quantumcircuit=qcircuit
 
@@ -127,7 +127,6 @@ class PermutationSolver(object):
     def tester(self, array):
         print(self.permutationdic[self._formIndexKey(array)])
 
-
 class DiagramSolver(object):
     '''
     Diaggram
@@ -137,7 +136,7 @@ class DiagramSolver(object):
 
 
 if __name__ == '__main__':
-    solver = PermutationSolver(max_n=5)
+    solver = PermutationSolver()
     # solver.tester(array=[0,1,2,3,4,5])
     result = solver.solve([x for x in range(6)], maxsolution=5)
     for item in result:
