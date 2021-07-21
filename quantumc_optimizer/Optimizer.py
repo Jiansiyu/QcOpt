@@ -23,6 +23,7 @@ class QcOptimizer(object):
         calculate the candidate of the result
         :param initialstate:
         :return:
+        [[],[],[],[]]
         '''
         targetconnection = self.targetconnection
         def helper(state, array=[]):
