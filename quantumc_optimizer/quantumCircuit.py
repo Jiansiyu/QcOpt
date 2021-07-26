@@ -126,7 +126,7 @@ class ibmq_bogota(ibmq_circuit):
     '''
     def __init__(self):
         self.circuitname="ibmq_bogota"
-        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
+        super(ibmq_bogota, self).__init__(circuitname=self.circuitname,
                                             circuityaml="{}.yaml".format(self.circuitname))
 
 
@@ -136,7 +136,7 @@ class ibmq_manila(ibmq_circuit):
     '''
     def __init__(self):
         self.circuitname="ibmq_manila"
-        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
+        super(ibmq_manila, self).__init__(circuitname=self.circuitname,
                                             circuityaml="{}.yaml".format(self.circuitname))
 
 
@@ -146,7 +146,7 @@ class ibmq_jakarta(ibmq_circuit):
     '''
     def __init__(self):
         self.circuitname="ibmq_jakarta"
-        super(ibmq_santiago, self).__init__(circuitname=self.circuitname,
+        super(ibmq_jakarta, self).__init__(circuitname=self.circuitname,
                                             circuityaml="{}.yaml".format(self.circuitname))
 
 class ibmq_belem(ibmq_circuit):

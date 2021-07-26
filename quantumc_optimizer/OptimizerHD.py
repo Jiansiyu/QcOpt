@@ -3,11 +3,48 @@ High Dimensional, High Efficient Solver
 '''
 import copy
 import multiprocessing
+import time
+
 from quantumc_optimizer import quantumCircuit
 import logging
-
+import itertools
 
 optlogger = logging.getLogger("OptimizerHD")
+
+def checkStageRes(target, statesChain):
+    '''
+    for one single states, check the current whether is the candiate, if not return the update target
+
+    :param runStack:
+    :return:
+    '''
+
+    state = statesChain[-1]  # should only the last one need to update
+    if not state:
+        optlogger.warning("the getfinalstates initial state is empty!!")
+        return (target, statesChain)
+
+    if not target:
+        return (True, statesChain)
+
+    length = len(state)
+    slow, fast = 0, 1
+    while fast < length:
+        paraA = [state[slow],state[fast]]
+        paraB = paraA[::-1]
+        if paraA in target:
+            target.remove(paraA)
+        if paraB in target:
+            target.remove(paraB)
+        slow += 1
+        fast += 1
+    if not target:
+        return (True, statesChain)
+    else:
+        return (target, statesChain)
+
+
+
 class Optimizer(object):
     '''
     High Dimension Quantum Qubit Solver High Efficiency concurrent Solver
@@ -51,67 +88,65 @@ class Optimizer(object):
         :return: list if next level states
         '''
         result = []
-        for exchangerule in self.qunatum_circuit.circuitconnection:
+        possibleconnection = [sorted(x) for x in self.quantum_circuit.circuitconnection]
+        possibleconnection = qc_circuit =list(k for k,_ in itertools.groupby(possibleconnection))
+
+        for exchangerule in possibleconnection:
             indexA, indexB = exchangerule[0], exchangerule[1]
             temp = copy.deepcopy(initialstate)
             temp[indexB],temp[indexA] = temp[indexA], temp[indexB]
             result.append(temp)
         return  result
 
-
-    def getfinalstates(self,initialparams=()):
-        '''
-
-        :param initialparams: target, states
-        :return:
-        '''
-
-        target, state = initialparams
-        if not state:
-            optlogger.warning("{} the getfinalstates initial state is empty!!".format(__class__))
-            return  target
-        if not target:
-            return []
-
-        length = len(initialparams)
-
-        slow, fast = 0, 1
-
-        while fast < length:
-            paraA = state[slow]
-            paraB = state[fast]
-            if [paraA, paraB] in target:
-                target.remove([paraA,paraB])
-            if [paraB,paraA] in target:
-                target.remove([paraB,paraA])
-            slow += 1
-            fast += 1
-
-        return target
-
-    def concurrentdfs(self,initailparam=()):
+    def concurrentdfs(self, initailparam=()):
         '''
         :param initailstates: tuple input, target, the first initial states,
                                (target list, current initial, result list)
         :return: return the first element that satisfy the permutation rule
         '''
+        if not  isinstance(initailparam, tuple):
+            raise TypeError("Input \"InitialParam\" need to be tuple!!")
+
         if not initailparam:
             raise TypeError("The input of the concurrentdfs is None!!")
 
-        target, initial, resultstack = initailparam
+        target, initial = initailparam
 
-        # concurrent DFS
-        if not target:
-            return resultstack
+        runStack = []  # (target, initial)
+        runStack.append((target,initial))
 
-        for nextRes in self.getnext(initial):
-            if nextRes not in resultstack:
-                pass
+        layerIndexer = 0
+        starttime = time.time()
+        while True:
+            # need concurrent update the result
+            layerIndexer += 1
+            length = len(runStack)
+            currentStage = runStack
+            runStack = []  # empty the current stack, ready for the next level
 
+            threadpool = multiprocessing.Pool(min(max(1,length),multiprocessing.cpu_count()))
+            currentStageRes = threadpool.starmap(checkStageRes, currentStage)
+            for item in currentStageRes:
+                targetTemp, stateTemp = item
+                if targetTemp == True:
+                    return stateTemp
+                else:
+                    for nexttemp in self.getnext(stateTemp[-1]):
+                        if nexttemp not in stateTemp:
+                            nextBuffer = copy.deepcopy(stateTemp)
+                            nextBuffer.append(nexttemp)
+                            runStack.append((targetTemp,nextBuffer))
+            threadpool.close()
+            optlogger.warning("running layer: {}, \n\t total checked combinations : {}  \n\t  "
+                           "concurrent thread : {} \n\t total time :{}".format(layerIndexer,length,self.nthread,time.time()-starttime))
 
     def solver(self):
-        pass
+        fullconnection = [[x, y] for x, y in itertools.permutations([x for x in range(self.n_qubit)], 2)]
+        initialStates = [[x for x in range(self.n_qubit)]]
+        result = self.concurrentdfs(initailparam=(fullconnection,initialStates))
+        print(result)
+
 if __name__ == '__main__':
     circuit = quantumCircuit.ibmq_santiago()
     opt = Optimizer(qcircuit=circuit)
-    circuit.draw()
+    opt.solver()
