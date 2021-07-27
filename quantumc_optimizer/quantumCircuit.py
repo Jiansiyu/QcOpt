@@ -12,7 +12,8 @@ class ibmq_circuit(object):
     '''
     IBM Q Circuit
     '''
-    def __init__(self,circuitname,circuityaml):
+    def __init__(self,circuitname,circuityaml=None):
+
         self._circuit=None
         self.circuitname=circuitname
         self.circuitconnection=None
@@ -20,6 +21,8 @@ class ibmq_circuit(object):
         self.circuitconfig = None
         self.circuitgraph = nx.Graph()
         self.n_qubit = 0
+        if not  circuityaml:
+            circuityaml = "{}.yaml".format(self.circuitname)
         self._loadcircuit(circuityaml)
 
 

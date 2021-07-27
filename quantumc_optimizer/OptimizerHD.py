@@ -1,152 +1,107 @@
-'''
-High Dimensional, High Efficient Solver
-'''
+import cProfile
 import copy
+import itertools
 import multiprocessing
 import time
-
-from quantumc_optimizer import quantumCircuit
 import logging
-import itertools
+import quantumCircuit
 
-optlogger = logging.getLogger("OptimizerHD")
-
-def checkStageRes(target, statesChain):
-    '''
-    for one single states, check the current whether is the candiate, if not return the update target
-
-    :param runStack:
-    :return:
-    '''
-
-    state = statesChain[-1]  # should only the last one need to update
-    if not state:
-        optlogger.warning("the getfinalstates initial state is empty!!")
-        return (target, statesChain)
-
-    if not target:
-        return (True, statesChain)
-
-    length = len(state)
-    slow, fast = 0, 1
-    while fast < length:
-        paraA = [state[slow],state[fast]]
-        paraB = paraA[::-1]
-        if paraA in target:
-            target.remove(paraA)
-        if paraB in target:
-            target.remove(paraB)
-        slow += 1
-        fast += 1
-    if not target:
-        return (True, statesChain)
-    else:
-        return (target, statesChain)
+optlogger = logging.getLogger("BFsearch")
 
 
+class findsolution(object):
+    def __init__(self, device, target_circuit=None, n_thread=-1):
+        self.hardware = device
+        self.device = self.hardware.circuitconnection
+        self.n_qubit = self.hardware.n_qubit
 
-class Optimizer(object):
-    '''
-    High Dimension Quantum Qubit Solver High Efficiency concurrent Solver
-
-
-    author: Siyu Jian (sj9va@virginia.edu)
-               ***************
-               *** Go Hoos ***
-               ***************
-    '''
-    def __init__(self,nthread = -1, qcircuit=None, initialpermutation=None, targetqcircuit=None):
-        '''
-
-        :param nthread:  number of concurrent thread used in the calculation -1. will use all the thread avaible
-        :param qcircuit: quantum circuit object
-        :param initialpermutation: The initial permutation used for search
-        '''
-        self.nthread = nthread
-        if self.nthread == -1:
-            self.nthread = multiprocessing.cpu_count()
+        self.n_thread = n_thread
+        if self.n_thread == -1:
+            self.n_thread = multiprocessing.cpu_count()
         else:
-            self.nthread = nthread
+            self.n_thread = n_thread
 
-        self.qunatum_circuit = qcircuit
-        # used for the connection rule
-        if not qcircuit:
-            self.quantum_circuit = quantumCircuit.ibmq_santiago()
+        if not target_circuit:
+            self.target_circuit = [[x, y] for x, y in list(itertools.combinations(range(self.n_qubit), 2))]
         else:
-            self.quantum_circuit = qcircuit
-        self.n_qubit = self.qunatum_circuit.n_qubit
+            self.target_circuit = target_circuit
 
-        self.threadPool = multiprocessing.Pool(self.nthread)
+        self.device_connection = [sorted(x) for x in self.device]
+        self.device_connection = list(k for k, _ in itertools.groupby(self.device_connection))
 
-        print("===> {}".format(self.quantum_circuit.circuitconnection))
+        self.next_swap = {}
 
-
-    def getnext(self,initialstate = []):
+    def _formIndexKey(self, single_layout):
         '''
-        Given the initial state, calculate all the next states
-        :param initialstate: the initial states need to calculate
-        :return: list if next level states
+        :param keyarray:
+        :return:
         '''
-        result = []
-        possibleconnection = [sorted(x) for x in self.quantum_circuit.circuitconnection]
-        possibleconnection = qc_circuit =list(k for k,_ in itertools.groupby(possibleconnection))
+        return "".join(str(x) for x in single_layout)
 
-        for exchangerule in possibleconnection:
-            indexA, indexB = exchangerule[0], exchangerule[1]
-            temp = copy.deepcopy(initialstate)
-            temp[indexB],temp[indexA] = temp[indexA], temp[indexB]
-            result.append(temp)
-        return  result
+    def _getNextSwap(self, firstLayout):
+        next_level_candidate = []
 
-    def concurrentdfs(self, initailparam=()):
-        '''
-        :param initailstates: tuple input, target, the first initial states,
-                               (target list, current initial, result list)
-        :return: return the first element that satisfy the permutation rule
-        '''
-        if not  isinstance(initailparam, tuple):
-            raise TypeError("Input \"InitialParam\" need to be tuple!!")
+        # calculate the next permuatation candidate
+        key = self._formIndexKey(firstLayout)
+        for physical_pair in self.device_connection:
+            next_layout = copy.deepcopy(firstLayout)
+            next_layout[physical_pair[0]], next_layout[physical_pair[1]] = next_layout[physical_pair[1]], next_layout[
+                physical_pair[0]]
+            next_level_candidate.append(next_layout)
+        self.next_swap[key] = next_level_candidate
 
-        if not initailparam:
-            raise TypeError("The input of the concurrentdfs is None!!")
+    def updateTarget(self, target, series_layout):
+        last_layout = series_layout[-1]
+        new_target = copy.deepcopy(target)
+        for physical_pair in self.device_connection:
+            gate = [last_layout[physical_pair[0]], last_layout[physical_pair[1]]]
+            if gate in new_target:
+                new_target.remove(gate)
+        if not new_target:
+            return True, series_layout
+        return new_target, series_layout
 
-        target, initial = initailparam
-
-        runStack = []  # (target, initial)
-        runStack.append((target,initial))
-
-        layerIndexer = 0
+    def findLayoutSolution(self, target, initial_layout):
+        solution_space = [(target, initial_layout)]
+        n_layers = 1
         starttime = time.time()
-        while True:
-            # need concurrent update the result
-            layerIndexer += 1
-            length = len(runStack)
-            currentStage = runStack
-            runStack = []  # empty the current stack, ready for the next level
 
-            threadpool = multiprocessing.Pool(min(max(1,length),multiprocessing.cpu_count()))
-            currentStageRes = threadpool.starmap(checkStageRes, currentStage)
-            for item in currentStageRes:
-                targetTemp, stateTemp = item
-                if targetTemp == True:
-                    return stateTemp
-                else:
-                    for nexttemp in self.getnext(stateTemp[-1]):
-                        if nexttemp not in stateTemp:
-                            nextBuffer = copy.deepcopy(stateTemp)
-                            nextBuffer.append(nexttemp)
-                            runStack.append((targetTemp,nextBuffer))
+        while True:
+            n_layers += 1
+            n_pool = len(solution_space)
+            threadpool = multiprocessing.Pool(min(max(1, n_pool), multiprocessing.cpu_count()))
+            new_solution_space = threadpool.starmap(self.updateTarget, solution_space)
             threadpool.close()
+
+            solution_space = []
+            for item in new_solution_space:
+                new_target, series_layout = item
+                if new_target == True:
+                    return series_layout
+                else:
+                    last_Layout = series_layout[-1]
+                    last_Layout_key = self._formIndexKey(last_Layout)
+                    if last_Layout_key not in self.next_swap.keys():
+                        self._getNextSwap(last_Layout)
+                    next_layout_candidates = self.next_swap[last_Layout_key]
+                    for next_layout_candidate in next_layout_candidates:
+                        next_series_layout = copy.deepcopy(series_layout)
+                        if next_layout_candidate not in next_series_layout:
+                            next_series_layout.append(next_layout_candidate)
+                            solution_space.append((new_target, next_series_layout))
+
             optlogger.warning("running layer: {}, \n\t total checked combinations : {}  \n\t  "
-                           "concurrent thread : {} \n\t total time :{}".format(layerIndexer,length,self.nthread,time.time()-starttime))
+                              "concurrent thread : {} \n\t total time :{}".format(n_layers, n_pool, self.n_thread,
+                                                                                  time.time() - starttime))
 
     def solver(self):
-        fullconnection = [[x, y] for x, y in itertools.permutations([x for x in range(self.n_qubit)], 2)]
-        initialStates = [[x for x in range(self.n_qubit)]]
-        result = self.concurrentdfs(initailparam=(fullconnection,initialStates))
-        print(result)
+        initial_layout = [[x for x in range(self.n_qubit)]]
+        result = self.findLayoutSolution(self.target_circuit, initial_layout)
+        return result
+
 
 if __name__ == '__main__':
-    circuit = quantumCircuit.ibmq_santiago()
-    opt = Optimizer(qcircuit=circuit)
-    opt.solver()
+    hardware = quantumCircuit.ibmq_circuit("line_7")
+    hardware.draw()
+    solver = findsolution(hardware)
+    print(solver.solver())
